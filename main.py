@@ -232,7 +232,7 @@ class ProcessingAfr:
         return print('File was successfully saved!')
 
 
-# class stands for averaging data and performing multiple linear regression
+# class stands for averaging data and performing multiple linear regression_results_of_averaged
 class Development:
     dir = 'Processed_AFR_all'
     dir_2 = 'Averaged_AFR'
@@ -369,27 +369,27 @@ class Development:
 
     def create_dataset(self):
         self.subfolder = self.sample_type
-        folder = r'Averaged_AFR/' + str(subfolder) + '/'
+        folder = r'Averaged_AFR/' + str(self.subfolder) + '/'
         lis = os.listdir(folder)
         print('Creating total dataset')
         for name in lis:
             path = folder + name
             loader = pd.read_csv(path, header=None)
             self.data_set = pd.concat([self.data_set, loader], axis=1, ignore_index=True)
-        ready_for_reg_path = r'Regression_ready_AFR/' + str(subfolder) + r'/regression_ready.csv'
+        ready_for_reg_path = r'Regression_ready_AFR/' + str(self.subfolder) + r'/averaged_regr_ready.csv'
         self.optimize_dataset()
         self.data_set.to_csv(ready_for_reg_path, header=False, index=False)
 
     def optimize_dataset(self):
         data_set = self.data_set
         data_set.drop(data_set[data_set.values == -1].index, axis=0, inplace=True)
-        data_set.index = [i for i in range(len(data_set))]
+        data_set.index = [k for k in range(len(data_set))]
         self.data_set = data_set
 
-    def make_prediction(self):
+    def make_prediction_data(self):
         lm = LinearRegression()
         data_set = self.data_set
-        print('Making regression . . . ')
+        print('Making regression_results_of_averaged . . . ')
         for i in range(len(data_set)):
             x1 = np.array(list(data_set.iloc[i, 4::14])).reshape(-1, 1)
             x2 = np.array(list(data_set.iloc[i, 6::14])).reshape(-1, 1)
@@ -404,9 +404,10 @@ class Development:
             mse = mean_squared_error(y, y_hat)
             parameters = (data_set.iloc[i, 2], data_set.iloc[i, 3], coef[0], coef[1], coef[2], intercept, r2, mse)
             self.lm_totals.append(parameters)
-        columns = ['max_fre', 'min_fre', 'k_r', 'k_h', 'k_c', 'b', 'r2_score', 'mse']
+        columns = ['max_fre', 'min_fre', 'k_rel', 'k_head', 'k_class', 'b', 'r2_score', 'mse']
         data = pd.DataFrame(self.lm_totals, columns=columns)
-        path = r'Regression_ready_AFR/regression/' + self.subfolder + '/regression_results_' + self.subfolder + '.csv'
+        path = r'Regression_ready_AFR/regression_results_of_averaged/' + self.subfolder + '/regression_results_' + \
+               self.subfolder + '.csv '
         data.to_csv(path)
         print('Done!')
 
@@ -431,22 +432,31 @@ class Development:
         x_heads = np.array(list(constant_frame.iloc[:, 5:9])).reshape(-1, 1)
         x_classic = np.array(list(constant_frame.iloc[:, 7:9])).reshape(-1, 1)
 
-        X = np.concatenate((x_rel, x_heads, x_classic), axis=1)
+        x = np.concatenate((x_rel, x_heads, x_classic), axis=1)
 
         y = np.array(list(constant_frame.iloc[:, 7:9]))
         lm = LinearRegression()
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=0)
-        lm.fit(X_train, y_train)
-        y_hat = lm.predict(X_test)
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=0)
+        lm.fit(x_train, y_train)
+
+        y_hat = lm.predict(x_test)
 
         coef = list(lm.coef_)
         intercept = lm.intercept_
         score = r2_score(y_test, y_hat)
         mse = mean_squared_error(y_test, y_hat)
 
-        parameters = (data_set.iloc[i, 2], data_set.iloc[i, 3], coef[i][0],
-                      coef[i][1], coef[i][2], intercept[i], r2[i], mse[i])
+        column = ['max_int', 'min_int', 'A_rel', 'B_heads', 'C_classic', 'D_intercept', 'r2_score', 'mse']
+        regression_frame = pd.DataFrame(data=None, columns=column)
 
+        for j in range(len(constant_frame)):
+            parameters = pd.DataFrame([constant_frame.iloc[i, 2], constant_frame.iloc[i, 3], coef[i][0],
+                          coef[i][1], coef[i][2], intercept[i], score[i], mse[i]]], columns=column)
+            regression_frame = pd.concat([regression_frame, parameters], axis=0, ignore_index=True)
+        path = r'Regression_ready_AFR/regression_results_non_averaged/' +  self.subfolder + '/t_regression_results_' + \
+               self.subfolder + '.csv '
+
+        regression_frame.to_csv('')
 
 first = ProcessingAfr()
 for i in ProcessingAfr.lis:
@@ -458,5 +468,5 @@ del first
 second = Development()
 second.run('sop')
 second.create_dataset()
-second.make_prediction()
+second.make_prediction_data()
 second.special_regression()
