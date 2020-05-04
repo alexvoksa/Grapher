@@ -161,11 +161,11 @@ class ProcessingAfr:
         self.feature = None
         self.minfre = None
         self.maxfre = None
-        self.min_rewr = float(100)
-        self.max_rewr = float(400)
+        self.min_rewr = None
+        self.max_rewr = None
         self.df_calc = pd.DataFrame()
 
-    def filter_data(self, file_name):
+    def filter_data(self, file_name, min_rewr, max_rewr):
         self.file_name = file_name
         self.path_correct = ProcessingAfr.dir + '/' + file_name  # creating correct file path
         self.name = os.path.splitext(file_name)[0]
@@ -174,6 +174,8 @@ class ProcessingAfr:
         self.feature = self.params.get(self.name_sample)
         self.minfre = float(self.name_splitted[1])
         self.maxfre = float(self.name_splitted[2])
+        self.min_rewr = float(min_rewr)
+        self.max_rewr = float(max_rewr)
         self.data = pd.read_csv('{}'.format(self.path_correct), header=None, decimal=",", delimiter=r"\s+", nrows=1)
         print('Loading AFR for: ', self.name_splitted[0] + '_' + self.name_splitted[4])
         self.data = filter_freq(self.data, minfre=self.minfre, maxfre=self.maxfre,
@@ -323,7 +325,7 @@ class Development:
 
 first = ProcessingAfr()
 for i in ProcessingAfr.lis:
-    first.filter_data(i)
+    first.filter_data(i, 100, 400)
     first.df_calc_params()
     first.save_data('all')
 del first
