@@ -450,13 +450,14 @@ class Development:
         regression_frame = pd.DataFrame(data=None, columns=column)
 
         for j in range(len(constant_frame)):
-            parameters = pd.DataFrame([constant_frame.iloc[i, 2], constant_frame.iloc[i, 3], coef[i][0],
-                          coef[i][1], coef[i][2], intercept[i], score[i], mse[i]]], columns=column)
+            parameters = pd.DataFrame([(constant_frame.iloc[j, 2], constant_frame.iloc[j, 3], coef[j][0],
+                          coef[j][1], coef[j][2], intercept[j], score[j], mse[j]])], columns=column)
             regression_frame = pd.concat([regression_frame, parameters], axis=0, ignore_index=True)
-        path = r'Regression_ready_AFR/regression_results_non_averaged/' +  self.subfolder + '/t_regression_results_' + \
-               self.subfolder + '.csv '
+        path = r'Regression_ready_AFR/regression_results_non_averaged/' +
+               self.subfolder + '/t_regression_results_' + self.subfolder + '.csv '
 
-        regression_frame.to_csv('')
+        regression_frame.to_csv(path)
+        print('Done!')
 
 first = ProcessingAfr()
 for i in ProcessingAfr.lis:
