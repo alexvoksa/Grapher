@@ -7,6 +7,7 @@ import os
 import math
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.model_selection import train_test_split
 
 
 # this function filtering data according to frequency
@@ -93,7 +94,7 @@ def classic_decr(data, start, stop):
                     except IndexError:
                         break
                 if len(values_np) > 0:
-                    values_np.sort(reverse=True)
+                    values_np.sort(reverse=False)
                     values.append(values_np[0])
                 else:
                     values.append(0)
@@ -145,7 +146,10 @@ def classic_decr(data, start, stop):
 class ProcessingAfr:
     dir = 'Raw_AFR'  # 'АЧХ чистые'
     lis = os.listdir(dir)
-    params = {line.split()[0][1:-1]: float(line.split()[1]) for line in open('params.txt', 'r')}
+    params = None
+
+    types = ['sop', 'tvel_bn', 'tvel_mox']
+
     methods = {'r': 'Processed_AFR_relief',
                'h': 'Processed_AFR_heads',
                's': 'Processed_AFR_straight',
@@ -164,6 +168,12 @@ class ProcessingAfr:
         self.min_rewr = None
         self.max_rewr = None
         self.df_calc = pd.DataFrame()
+        self.sop_dict = {line.split()[0][1:-1]: float(line.split()[1])
+                         for line in open('sops.txt', 'r', encoding='utf-8')}
+        self.tvel_bn_dict = {line.split()[0][1:-1]: float(line.split()[1])
+                             for line in open('tvel_bn.txt', 'r', encoding='utf-8')}
+        self.tvel_mox_dict = {line.split()[0][1:-1]: float(line.split()[1])
+                              for line in open('tvel_mox.txt', 'r', encoding='utf-8')}
 
     def filter_data(self, file_name, min_rewr, max_rewr):
         self.file_name = file_name
@@ -171,6 +181,9 @@ class ProcessingAfr:
         self.name = os.path.splitext(file_name)[0]
         self.name_splitted = re.split('_', self.name)
         self.name_sample = self.name_splitted[0]
+        self.sop_dict.update(self.tvel_bn_dict)
+        self.sop_dict.update(self.tvel_mox_dict)
+        ProcessingAfr.params = self.sop_dict
         self.feature = self.params.get(self.name_sample)
         self.minfre = float(self.name_splitted[1])
         self.maxfre = float(self.name_splitted[2])
@@ -185,6 +198,7 @@ class ProcessingAfr:
     def df_calc_params(self):
         data = self.data
         name = self.name_sample
+
         feature = ProcessingAfr.params.get(name)
         columns = ['name', 'feature', 'inter_max', 'inter_min', 'parameter_rel',
                    'parameter_heads', 'mse_heads', 'parameter_classic', 'mse_classic']
@@ -214,7 +228,7 @@ class ProcessingAfr:
             'e': self.name_splitted[4]
         }
         print('Saving data...')
-        df_calc.to_csv(r'{a}/{b}_{c}_{d}_{e}.csv'.format(**for_format), header=False, index=False)
+        df_calc.to_csv(r'{a}/Methods_{b}_{c}_{d}_{e}.csv'.format(**for_format), header=False, index=False)
         return print('File was successfully saved!')
 
 
@@ -224,17 +238,27 @@ class Development:
     dir_2 = 'Averaged_AFR'
     lis = os.listdir(dir)
     lis_2 = os.listdir(dir_2)
-    groups = {'test': 'SOP', 'real_1': 'MOX', 'real_2': 'MOX_BN'}
 
     def __init__(self):
         self.data = pd.DataFrame()
         self.subfolder = None
         self.data_set = pd.DataFrame()
         self.lm_totals = []
+        self.kind_of_sample = {
+            'sop': {line.split()[0][1:-1]: float(line.split()[1]) for
+                    line in open('sops.txt', 'r', encoding='utf-8')},
+            'tvel_bn': {line.split()[0][1:-1]: float(line.split()[1]) for
+                        line in open('tvel_bn.txt', 'r', encoding='utf-8')},
+            'tvel_mox': {line.split()[0][1:-1]: float(line.split()[1]) for
+                         line in open('tvel_mox.txt', 'r', encoding='utf-8')}
+        }
+        self.sample_type = None
 
-    def run(self):
+    def run(self, test_type):
         names = self.lis
-        parameters = list(ProcessingAfr.params.keys())
+        test_type = str(test_type)
+        self.sample_type = test_type
+        parameters = list(self.kind_of_sample.get(test_type).keys())
         for item in parameters:
             current_frame = pd.DataFrame()
             print('Loading data for:' + str(item))
@@ -322,27 +346,29 @@ class Development:
         method_type = 'averaged'
         name_sample = str(df_calc.iloc[0, 0])
         feature = str(df_calc.iloc[0, 1])
-        kind_of = 'tvel'
         for_format = {
             'a': destination_folder,
             'b': method_type,
             'c': name_sample,
             'd': feature,
-            'z': kind_of
+            'z': None
         }
         print('Saving data...')
-        if 'СОП' in for_format['c']:
+        if self.sample_type == 'sop':
             for_format['z'] = 'sop'
+        elif self.sample_type == 'tvel_mox':
+            for_format['z'] = 'tvel_mox'
         else:
-            for_format['z'] = 'tvel'
+            for_format['z'] = 'tvel_bn'
+
         df_calc.to_csv(r'{a}/{z}/{b}_{c}_{d}.csv'.format(**for_format), header=False, index=False)
         self.data = pd.DataFrame()
         self.data_set = pd.DataFrame()
 
         return print('File was successfully saved!')
 
-    def create_dataset(self, subfolder):
-        self.subfolder = subfolder
+    def create_dataset(self):
+        self.subfolder = self.sample_type
         folder = r'Averaged_AFR/' + str(subfolder) + '/'
         lis = os.listdir(folder)
         print('Creating total dataset')
@@ -384,14 +410,53 @@ class Development:
         data.to_csv(path)
         print('Done!')
 
-#first = ProcessingAfr()
-#for i in ProcessingAfr.lis:
-#    first.filter_data(i, 100, 400)
-#    first.df_calc_params()
-#    first.save_data('all')
-#del first
+    def special_regression(self):
+        names = self.lis  # list of all non-averaged samples
+        constant_frame = pd.DataFrame()
+
+        for name in names:
+            correct_path = self.dir + r'/' + str(name)
+            temporary_frame = pd.read_csv(correct_path, header=None)
+            constant_frame = pd.concat([constant_frame, temporary_frame], axis=1, ignore_index=True)
+        del temporary_frame
+
+        h_drop = (constant_frame.iloc[:, range(5, len(constant_frame.iloc[0]), 9)].values != -1).sum(axis=1) < 2
+        c_drop = (constant_frame.iloc[:, range(7, len(constant_frame.iloc[0]), 9)].values != -1).sum(axis=1) < 2
+        constant_frame.loc[h_drop] = np.nan
+        constant_frame.loc[c_drop] = np.nan
+        constant_frame.dropna(axis=0, inplace=True)
+        constant_frame.index = [i for i in range(len(constant_frame))]
+
+        x_rel = np.array(list(constant_frame.iloc[:, 4:9])).reshape(-1, 1)
+        x_heads = np.array(list(constant_frame.iloc[:, 5:9])).reshape(-1, 1)
+        x_classic = np.array(list(constant_frame.iloc[:, 7:9])).reshape(-1, 1)
+
+        X = np.concatenate((x_rel, x_heads, x_classic), axis=1)
+
+        y = np.array(list(constant_frame.iloc[:, 7:9]))
+        lm = LinearRegression()
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=0)
+        lm.fit(X_train, y_train)
+        y_hat = lm.predict(X_test)
+
+        coef = list(lm.coef_)
+        intercept = lm.intercept_
+        score = r2_score(y_test, y_hat)
+        mse = mean_squared_error(y_test, y_hat)
+
+        parameters = (data_set.iloc[i, 2], data_set.iloc[i, 3], coef[i][0],
+                      coef[i][1], coef[i][2], intercept[i], r2[i], mse[i])
+
+
+first = ProcessingAfr()
+for i in ProcessingAfr.lis:
+    first.filter_data(i, 200, 250)
+    first.df_calc_params()
+    first.save_data('all')
+del first
 
 second = Development()
-second.run()
-second.create_dataset('sop')
+second.run('sop')
+second.create_dataset()
 second.make_prediction()
+second.special_regression()
