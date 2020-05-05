@@ -461,7 +461,7 @@ class Development:
 
 first = ProcessingAfr()
 for i in ProcessingAfr.lis:
-    first.filter_data(i, 100, 500)
+    first.filter_data(i, 100, 400)
     first.df_calc_params()
     first.save_data('all')
 del first
