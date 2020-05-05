@@ -8,7 +8,7 @@ import math
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.model_selection import train_test_split
-
+from multiprocessing import Pool, TimeoutError
 
 # this function filtering data according to frequency
 def filter_freq(data, minfre, maxfre, min_rewr, max_rewr):
@@ -219,7 +219,7 @@ class ProcessingAfr:
 
     def save_data(self, method_type):
         df_calc = self.df_calc
-        destination_folder = ProcessingAfr.methods.get(method_type)
+        destination_folder = ProcessingAfr.methods[method_type]
         for_format = {
             'a': destination_folder,
             'b': method_type,
@@ -459,27 +459,35 @@ class Development:
         print('Done!')
 
 
-first = ProcessingAfr()
-for i in ProcessingAfr.lis:
+def calc(i):
+    first = ProcessingAfr()
     first.filter_data(i, 100, 400)
     first.df_calc_params()
     first.save_data('all')
-del first
+    del first
 
-second = Development()
-second.run('sop')
-second.create_dataset()
-second.make_prediction_data()
-second.special_regression()
 
-second = Development()
-second.run('tvel_bn')
-second.create_dataset()
-second.make_prediction_data()
-second.special_regression()
+if __name__ == '__main__':
+    with Pool(processes=4) as pool:
+        multiple_results = []
+        for i in ProcessingAfr.lis:
+            multiple_results.append(pool.apply_async(calc, (i,)))
+        [res.get() for res in multiple_results]
 
-second = Development()
-second.run('tvel_mox')
-second.create_dataset()
-second.make_prediction_data()
-second.special_regression()
+    second = Development()
+    second.run('sop')
+    second.create_dataset()
+    second.make_prediction_data()
+    second.special_regression()
+
+    second = Development()
+    second.run('tvel_bn')
+    second.create_dataset()
+    second.make_prediction_data()
+    second.special_regression()
+
+    second = Development()
+    second.run('tvel_mox')
+    second.create_dataset()
+    second.make_prediction_data()
+    second.special_regression()
