@@ -364,8 +364,7 @@ class Development:
         df_calc.to_csv(r'{a}/{z}/{b}_{c}_{d}.csv'.format(**for_format), header=False, index=False)
         self.data = pd.DataFrame()
         self.data_set = pd.DataFrame()
-
-        return print('File was successfully saved!')
+        print('File was successfully saved!')
 
     def create_dataset(self):
         self.subfolder = self.sample_type
@@ -451,23 +450,36 @@ class Development:
 
         for j in range(len(constant_frame)):
             parameters = pd.DataFrame([(constant_frame.iloc[j, 2], constant_frame.iloc[j, 3], coef[j][0],
-                          coef[j][1], coef[j][2], intercept[j], score[j], mse[j]])], columns=column)
+                                        coef[j][1], coef[j][2], intercept[j], score[j], mse[j])], columns=column)
             regression_frame = pd.concat([regression_frame, parameters], axis=0, ignore_index=True)
-        path = r'Regression_ready_AFR/regression_results_non_averaged/' +
-               self.subfolder + '/t_regression_results_' + self.subfolder + '.csv '
 
+        path = r'Regression_ready_AFR/regression_results_non_averaged/' + \
+               self.subfolder + '/t_regression_results_' + self.subfolder + '.csv '
         regression_frame.to_csv(path)
         print('Done!')
 
+
 first = ProcessingAfr()
 for i in ProcessingAfr.lis:
-    first.filter_data(i, 200, 250)
+    first.filter_data(i, 100, 500)
     first.df_calc_params()
     first.save_data('all')
 del first
 
 second = Development()
 second.run('sop')
+second.create_dataset()
+second.make_prediction_data()
+second.special_regression()
+
+second = Development()
+second.run('tvel_bn')
+second.create_dataset()
+second.make_prediction_data()
+second.special_regression()
+
+second = Development()
+second.run('tvel_mox')
 second.create_dataset()
 second.make_prediction_data()
 second.special_regression()
