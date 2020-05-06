@@ -138,8 +138,8 @@ def calc_with_np():
                 if freqs[extrm] in freqs[start:stop + 1]:
                     coords.append(extrm)
             classic1, mse_classic1 = classic_decr_with_np(amps, freqs, coords)
-            inter_min = round(float(data.iloc[1, start]), 7)
-            inter_max = round(float(data.iloc[1, stop]), 7)
+            inter_min = round(freqs[start], 7)
+            inter_max = round(freqs[stop], 7)
             values1 = [inter_max, inter_min, classic1, mse_classic1]
             dict_append1 = [{a: b for a, b in zip(columns, values1)}]
             df_calc1 = df_calc1.append(dict_append1)
