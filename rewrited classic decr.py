@@ -7,27 +7,27 @@ import math
 import timeit
 
 
-def classic_decr_with_np(amps_in_range, freq_in_range):
-    # structure ['coord', 'amp_max', 'freq_max', 'freq_min_1', 'freq_min_2', 'found_freq_left', 'found_freq_right']
-    amps_in_range = np.array(data.iloc[0, start:stop + 1])
-    freq_in_range = np.array(data.iloc[1, start:stop + 1])
-    coords_amps_max = argrelextrema(amps_in_range, np.greater)[0]
-    max_amps_in_range = np.array(amps_in_range[coords_amps_max])
-    max_freq_in_range = np.array(freq_in_range[coords_amps_max])
-    lower_range_amps = max_amps_in_range * 1 / math.sqrt(2) * 0.95
-    upper_range_amps = max_amps_in_range * 1 / math.sqrt(2) * 1.05
+def classic_decr_with_np(amps, freqs, coords):
     list_of_decr = []
-    for i in range(len(coords_amps_max)):
+    for extr in coords:
+        amp_max_in_range = amps[extr]
+        freq_max_in_range = freqs[extr]
+        lower_range_amp = amp_max_in_range * 1 / math.sqrt(2) * 0.95
+        upper_range_amp = amp_max_in_range * 1 / math.sqrt(2) * 1.05
         values_min = []
         values_max = []
-        for j in range(34):
-            if int(coords_amps_max[i]) - j >= 0:
-                if lower_range_amps[i] <= amps_in_range[int(coords_amps_max[i]) - j] <= upper_range_amps[i]:
-                    values_min.append(freq_in_range[int(coords_amps_max[i]) - j])
-        for j in range(34):
-            if int(coords_amps_max[i]) + j <= len(coords_amps_max):
-                if lower_range_amps[i] <= amps_in_range[int(coords_amps_max[i]) + j] <= upper_range_amps[i]:
-                    values_max.append(freq_in_range[int(coords_amps_max[i]) + j])
+        for j in range(25):
+            if extr - j >= 0:
+                if lower_range_amp <= amps[extr - j] <= upper_range_amp:
+                    values_min.append(freqs[extr - j])
+            else:
+                break
+        for j in range(25):
+            if extr + j <= len(amps):
+                if lower_range_amp <= amps[extr + j] <= upper_range_amp:
+                    values_max.append(freqs[extr + j])
+            else:
+                break
         if len(values_min) > 0:
             values_min = values_min[0]
         else:
@@ -37,11 +37,11 @@ def classic_decr_with_np(amps_in_range, freq_in_range):
         else:
             values_max = 0
         if values_min and values_max != 0:
-            list_of_decr.append((values_max - values_min) / 2 / max_freq_in_range[i])
+            list_of_decr.append((values_max - values_min) / 2 / freq_max_in_range)
         elif values_max == 0 and values_min != 0:
-            list_of_decr.append((max_freq_in_range[i] - values_min) / max_freq_in_range[i])
+            list_of_decr.append((freq_max_in_range - values_min) / freq_max_in_range)
         elif values_max != 0 and values_min == 0:
-            list_of_decr.append((values_max - max_freq_in_range[i]) / max_freq_in_range[i])
+            list_of_decr.append((values_max - freq_max_in_range) / freq_max_in_range)
     # calculating mean and MSE of classic decrement for range(start-stop) excluding NaN
     if len(list_of_decr) != 0:
         mean_decr = np.nanmean(list_of_decr)
@@ -71,7 +71,7 @@ def classic_decr_without_np(data, start, stop):
                           sqrt_max * data.iloc[0, i + 1]]
                 values_np = []
                 # getting values at the left side form the maximum
-                for j in range(55):
+                for j in range(25):
                     try:
                         if values[3] <= data.iloc[0, values[0] - j] <= values[4]:
                             values_np.append(data.iloc[1, i - j])
@@ -83,7 +83,7 @@ def classic_decr_without_np(data, start, stop):
                     values.append(0)
                 # getting values at the right side form the maximum
                 values_np = []
-                for j in range(55):
+                for j in range(25):
                     try:
                         if values[3] <= data.iloc[0, values[0] + j] <= values[4]:
                             values_np.append(data.iloc[1, i + j])
@@ -128,13 +128,19 @@ def calc_with_np():
     columns = ['inter_max', 'inter_min', 'parameter_classic', 'mse_classic']
     df_calc1 = pd.DataFrame(columns=columns)
     df_calc2 = pd.DataFrame(columns=columns)
+    amps = np.array(data.iloc[0])
+    freqs = np.array(data.iloc[1])
+    coords_max = argrelextrema(amps, np.greater)[0]
 
     for k in range(2, 4):
         start = 0
         for stop in range(2, 200, k):
-
+            coords = []
+            for extrm in coords_max:
+                if freqs[extrm] in freqs[start:stop + 1]:
+                    coords.append(extrm)
+            classic1, mse_classic1 = classic_decr_with_np(amps, freqs, coords)
             classic, mse_classic = classic_decr_without_np(data, start, stop)
-            classic1, mse_classic1 = classic_decr_with_np(data, start, stop)
             inter_min = round(float(data.iloc[1, start]), 7)
             inter_max = round(float(data.iloc[1, stop]), 7)
             values1 = [inter_max, inter_min, classic1, mse_classic1]
@@ -146,23 +152,6 @@ def calc_with_np():
             start = stop
             c2.append((classic, mse_classic))
             c1.append((classic1, mse_classic1))
-
-
-
-def calc_without_np():
-    columns = ['inter_max', 'inter_min', 'parameter_classic', 'mse_classic']
-    df_calc = pd.DataFrame(columns=columns)
-    for k in range(2, 4):
-        start = 0
-        for stop in range(1, 200, k):
-            classic, mse_classic = classic_decr_without_np(data, start, stop)
-            inter_min = round(float(data.iloc[1, start]), 7)
-            inter_max = round(float(data.iloc[1, stop]), 7)
-            values = [inter_max, inter_min, classic, mse_classic]
-            dict_append = [{a: b for a, b in zip(columns, values)}]
-            df_calc = df_calc.append(dict_append)
-            start = stop
-            c2.append((classic, mse_classic))
 
 
 data = pd.read_csv(r'Raw_AFR/СОП-05_100_500_5,0_14.txt', header=None, delimiter='\s+', decimal=',', nrows=1)
