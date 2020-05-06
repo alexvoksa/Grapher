@@ -127,11 +127,10 @@ def classic_decr_without_np(data, start, stop):
 def calc_with_np():
     columns = ['inter_max', 'inter_min', 'parameter_classic', 'mse_classic']
     df_calc1 = pd.DataFrame(columns=columns)
-    df_calc2 = pd.DataFrame(columns=columns)
     amps = np.array(data.iloc[0])
     freqs = np.array(data.iloc[1])
     coords_max = argrelextrema(amps, np.greater)[0]
-    for k in range(2, 4):
+    for k in tqdm(range(2, 4)):
         start = 0
         for stop in range(2, 200, k):
             coords = []
@@ -151,7 +150,7 @@ def calc_with_np():
 def calc_without_np():
     columns = ['inter_max', 'inter_min', 'parameter_classic', 'mse_classic']
     df_calc2 = pd.DataFrame(columns=columns)
-    for k in range(2, 4):
+    for k in tqdm(range(2, 4)):
         start = 0
         for stop in range(2, 200, k):
             classic, mse_classic = classic_decr_without_np(data, start, stop)
@@ -170,5 +169,5 @@ data.loc[1] = [100 + i * 400 / 24001 for i in range(len(data.loc[0]))]
 c1 = []
 c2 = []
 
-print(timeit.timeit(calc_with_np, number=20))
-print(timeit.timeit(calc_without_np, number=20))
+print(timeit.timeit(calc_with_np, number=1))
+print(timeit.timeit(calc_without_np, number=1))
