@@ -8,7 +8,7 @@ import math
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.model_selection import train_test_split
-from multiprocessing import Pool, TimeoutError
+from multiprocessing import Pool
 
 # this function filtering data according to frequency
 def filter_freq(data, minfre, maxfre, min_rewr, max_rewr):
@@ -35,6 +35,7 @@ def rewrite_freq(data, min_rewr, max_rewr):
 def relief(data, start, stop):
     start = int(start)
     stop = int(stop)
+
     diff = np.diff(data.loc[0, start:stop].to_list()) / np.diff(data.loc[1, start:stop].to_list())
     rel = round(np.trapz(abs(diff), x=data.loc[1, start + 1:stop]) /
                 np.trapz(data.loc[0, start:stop], x=data.loc[1, start:stop]), 5)
