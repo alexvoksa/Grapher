@@ -465,13 +465,7 @@ def calc(i):
     first.save_data('all')
     del first
 
-for i in ProcessingAfr.lis:
-    first = ProcessingAfr()
-    first.filter_data(i, 100, 400)
-    first.df_calc_params()
-    first.save_data('all')
 
-"""
 if __name__ == '__main__':
     with Pool(processes=4) as pool:
         multiple_results = []
@@ -496,4 +490,3 @@ if __name__ == '__main__':
     second.create_dataset()
     second.make_prediction_data()
     second.special_regression()
-"""
