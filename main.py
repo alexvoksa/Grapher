@@ -95,7 +95,6 @@ def classic_decr(data, start, stop):
                     except IndexError:
                         break
                 if len(values_np) > 0:
-                    values_np.sort(reverse=False)
                     values.append(values_np[0])
                 else:
                     values.append(0)
@@ -108,7 +107,6 @@ def classic_decr(data, start, stop):
                     except IndexError:
                         break
                 if len(values_np) > 0:
-                    values_np.sort(reverse=False)
                     values.append(values_np[0])
                 else:
                     values.append(0)
