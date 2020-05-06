@@ -53,7 +53,7 @@ def heads(data, start, stop):
             if data.iloc[0, i] < data.iloc[0, i + 1] > data.iloc[0, i + 2]:
                 values = np.append(data.iloc[0, i - 1: i + 4], data.iloc[1, i - 1: i + 4])
                 if len(values) == 10:
-                    z = np.polyfit(values[0:4], values[5:9], 2)[0]
+                    z = np.polyfit(values[0:5], values[5:10], 2)[0]
                     if z < 0:
                         q = math.sqrt(-(float(values[2])) / z) / (float(values[7]))
                         q_list.append(q)
@@ -465,7 +465,13 @@ def calc(i):
     first.save_data('all')
     del first
 
+for i in ProcessingAfr.lis:
+    first = ProcessingAfr()
+    first.filter_data(i, 100, 400)
+    first.df_calc_params()
+    first.save_data('all')
 
+"""
 if __name__ == '__main__':
     with Pool(processes=4) as pool:
         multiple_results = []
@@ -490,3 +496,4 @@ if __name__ == '__main__':
     second.create_dataset()
     second.make_prediction_data()
     second.special_regression()
+"""
