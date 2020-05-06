@@ -131,7 +131,6 @@ def calc_with_np():
     amps = np.array(data.iloc[0])
     freqs = np.array(data.iloc[1])
     coords_max = argrelextrema(amps, np.greater)[0]
-
     for k in range(2, 4):
         start = 0
         for stop in range(2, 200, k):
@@ -140,18 +139,29 @@ def calc_with_np():
                 if freqs[extrm] in freqs[start:stop + 1]:
                     coords.append(extrm)
             classic1, mse_classic1 = classic_decr_with_np(amps, freqs, coords)
-            classic, mse_classic = classic_decr_without_np(data, start, stop)
             inter_min = round(float(data.iloc[1, start]), 7)
             inter_max = round(float(data.iloc[1, stop]), 7)
             values1 = [inter_max, inter_min, classic1, mse_classic1]
-            values2 = [inter_max, inter_min, classic, mse_classic]
             dict_append1 = [{a: b for a, b in zip(columns, values1)}]
-            dict_append2 = [{a: b for a, b in zip(columns, values2)}]
             df_calc1 = df_calc1.append(dict_append1)
+            start = stop
+            c1.append((classic1, mse_classic1))
+
+
+def calc_without_np():
+    columns = ['inter_max', 'inter_min', 'parameter_classic', 'mse_classic']
+    df_calc2 = pd.DataFrame(columns=columns)
+    for k in range(2, 4):
+        start = 0
+        for stop in range(2, 200, k):
+            classic, mse_classic = classic_decr_without_np(data, start, stop)
+            inter_min = round(float(data.iloc[1, start]), 7)
+            inter_max = round(float(data.iloc[1, stop]), 7)
+            values2 = [inter_max, inter_min, classic, mse_classic]
+            dict_append2 = [{a: b for a, b in zip(columns, values2)}]
             df_calc2 = df_calc2.append(dict_append2)
             start = stop
             c2.append((classic, mse_classic))
-            c1.append((classic1, mse_classic1))
 
 
 data = pd.read_csv(r'Raw_AFR/СОП-05_100_500_5,0_14.txt', header=None, delimiter='\s+', decimal=',', nrows=1)
@@ -161,4 +171,4 @@ c1 = []
 c2 = []
 
 print(timeit.timeit(calc_with_np, number=20))
-
+print(timeit.timeit(calc_without_np, number=20))
