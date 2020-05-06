@@ -88,7 +88,7 @@ def classic_decr(data, start, stop):
                           sqrt_max * data.iloc[0, i + 1]]
                 values_np = []
                 # getting values at the left side form the maximum
-                for j in range(55):
+                for j in range(25):
                     try:
                         if values[3] <= data.iloc[0, values[0] - j] <= values[4]:
                             values_np.append(data.iloc[1, i - j])
@@ -100,7 +100,7 @@ def classic_decr(data, start, stop):
                     values.append(0)
                 # getting values at the right side form the maximum
                 values_np = []
-                for j in range(55):
+                for j in range(25):
                     try:
                         if values[3] <= data.iloc[0, values[0] + j] <= values[4]:
                             values_np.append(data.iloc[1, i + j])
