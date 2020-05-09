@@ -8,7 +8,8 @@ import math
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.model_selection import train_test_split
-from multiprocessing import Pool, TimeoutError
+from sklearn.preprocessing import MinMaxScaler
+from multiprocessing import Pool
 
 # this function filtering data according to frequency
 def filter_freq(data, minfre, maxfre, min_rewr, max_rewr):
@@ -35,6 +36,7 @@ def rewrite_freq(data, min_rewr, max_rewr):
 def relief(data, start, stop):
     start = int(start)
     stop = int(stop)
+
     diff = np.diff(data.loc[0, start:stop].to_list()) / np.diff(data.loc[1, start:stop].to_list())
     rel = round(np.trapz(abs(diff), x=data.loc[1, start + 1:stop]) /
                 np.trapz(data.loc[0, start:stop], x=data.loc[1, start:stop]), 5)
@@ -52,7 +54,7 @@ def heads(data, start, stop):
             if data.iloc[0, i] < data.iloc[0, i + 1] > data.iloc[0, i + 2]:
                 values = np.append(data.iloc[0, i - 1: i + 4], data.iloc[1, i - 1: i + 4])
                 if len(values) == 10:
-                    z = np.polyfit(values[0:4], values[5:9], 2)[0]
+                    z = np.polyfit(values[0:5], values[5:10], 2)[0]
                     if z < 0:
                         q = math.sqrt(-(float(values[2])) / z) / (float(values[7]))
                         q_list.append(q)
@@ -87,27 +89,25 @@ def classic_decr(data, start, stop):
                           sqrt_max * data.iloc[0, i + 1]]
                 values_np = []
                 # getting values at the left side form the maximum
-                for j in range(55):
+                for j in range(25):
                     try:
                         if values[3] <= data.iloc[0, values[0] - j] <= values[4]:
                             values_np.append(data.iloc[1, i - j])
                     except IndexError:
                         break
                 if len(values_np) > 0:
-                    values_np.sort(reverse=False)
                     values.append(values_np[0])
                 else:
                     values.append(0)
                 # getting values at the right side form the maximum
                 values_np = []
-                for j in range(55):
+                for j in range(25):
                     try:
                         if values[3] <= data.iloc[0, values[0] + j] <= values[4]:
                             values_np.append(data.iloc[1, i + j])
                     except IndexError:
                         break
                 if len(values_np) > 0:
-                    values_np.sort(reverse=False)
                     values.append(values_np[0])
                 else:
                     values.append(0)
@@ -144,8 +144,8 @@ def classic_decr(data, start, stop):
 
 # class stands for creation data for further transformation
 class ProcessingAfr:
-    dir = 'Raw_AFR'  # 'АЧХ чистые'
-    lis = os.listdir(dir)
+    dir_1 = 'Raw_AFR'  # 'АЧХ чистые'
+    lis = os.listdir(dir_1)
     params = None
 
     types = ['sop', 'tvel_bn', 'tvel_mox']
@@ -177,7 +177,7 @@ class ProcessingAfr:
 
     def filter_data(self, file_name, min_rewr, max_rewr):
         self.file_name = file_name
-        self.path_correct = ProcessingAfr.dir + '/' + file_name  # creating correct file path
+        self.path_correct = ProcessingAfr.dir_1 + '/' + file_name  # creating correct file path
         self.name = os.path.splitext(file_name)[0]
         self.name_splitted = re.split('_', self.name)
         self.name_sample = self.name_splitted[0]
@@ -234,9 +234,9 @@ class ProcessingAfr:
 
 # class stands for averaging data and performing multiple linear regression_results_of_averaged
 class Development:
-    dir = 'Processed_AFR_all'
+    dir_1 = 'Processed_AFR_all'
     dir_2 = 'Averaged_AFR'
-    lis = os.listdir(dir)
+    lis = os.listdir(dir_1)
     lis_2 = os.listdir(dir_2)
 
     def __init__(self):
@@ -264,7 +264,7 @@ class Development:
             print('Loading data for:' + str(item))
             for name in names:
                 if item in name:
-                    correct_path = self.dir + r'/' + str(name)
+                    correct_path = self.dir_1 + r'/' + str(name)
                     temporary_frame = pd.read_csv(correct_path, header=None)
                     current_frame = pd.concat([current_frame, temporary_frame], axis=1, ignore_index=True)
                     del temporary_frame
@@ -410,47 +410,46 @@ class Development:
         data.to_csv(path)
         print('Done!')
 
-    def special_regression(self):
+    def special_regression(self, kind):
         names = self.lis  # list of all non-averaged samples
-        constant_frame = pd.DataFrame()
+        keys = list(self.kind_of_sample[kind].keys())
+        list_of_files = []
+        for num, val in enumerate(names):
+            for p in keys:
+                if p in val:
+                    list_of_files.append(num)
 
+        constant_frame = pd.DataFrame()
+        if len(list_of_files) > 0:
+            names = list(np.array(names)[list_of_files])
         for name in names:
-            correct_path = self.dir + r'/' + str(name)
+            correct_path = self.dir_1 + r'/' + str(name)
             temporary_frame = pd.read_csv(correct_path, header=None)
             constant_frame = pd.concat([constant_frame, temporary_frame], axis=1, ignore_index=True)
         del temporary_frame
 
-        h_drop = (constant_frame.iloc[:, range(5, len(constant_frame.iloc[0]), 9)].values != -1).sum(axis=1) < 2
-        c_drop = (constant_frame.iloc[:, range(7, len(constant_frame.iloc[0]), 9)].values != -1).sum(axis=1) < 2
-        constant_frame.loc[h_drop] = np.nan
-        constant_frame.loc[c_drop] = np.nan
-        constant_frame.dropna(axis=0, inplace=True)
+        dropper = [nu for nu, va in enumerate(constant_frame.values) if -1 in va]
+        constant_frame.drop(dropper, axis=0, inplace=True)
         constant_frame.index = [i for i in range(len(constant_frame))]
-
-        x_rel = np.array(list(constant_frame.iloc[:, 4:9])).reshape(-1, 1)
-        x_heads = np.array(list(constant_frame.iloc[:, 5:9])).reshape(-1, 1)
-        x_classic = np.array(list(constant_frame.iloc[:, 7:9])).reshape(-1, 1)
-
-        x = np.concatenate((x_rel, x_heads, x_classic), axis=1)
-
-        y = np.array(list(constant_frame.iloc[:, 7:9]))
-        lm = LinearRegression()
-        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=0)
-        lm.fit(x_train, y_train)
-
-        y_hat = lm.predict(x_test)
-
-        coef = list(lm.coef_)
-        intercept = lm.intercept_
-        score = r2_score(y_test, y_hat)
-        mse = mean_squared_error(y_test, y_hat)
 
         column = ['max_int', 'min_int', 'A_rel', 'B_heads', 'C_classic', 'D_intercept', 'r2_score', 'mse']
         regression_frame = pd.DataFrame(data=None, columns=column)
-
         for j in range(len(constant_frame)):
-            parameters = pd.DataFrame([(constant_frame.iloc[j, 2], constant_frame.iloc[j, 3], coef[j][0],
-                                        coef[j][1], coef[j][2], intercept[j], score[j], mse[j])], columns=column)
+            x_rel = np.array(constant_frame.iloc[j, 4::9])
+            x_heads = np.array(constant_frame.iloc[j, 5::9])
+            x_classic = np.array(constant_frame.iloc[j, 7::9])
+            x = np.array([x_rel, x_heads, x_classic]).T
+            y = np.array(constant_frame.iloc[j, 1::9])
+            lm = LinearRegression()
+            x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=0)
+            lm.fit(x_train, y_train)
+            y_hat = lm.predict(x_test)
+            coef = list(lm.coef_)
+            intercept = lm.intercept_
+            score = r2_score(y_test, y_hat)
+            mse = mean_squared_error(y_test, y_hat)
+            parameters = pd.DataFrame([(constant_frame.iloc[j, 2], constant_frame.iloc[j, 3], coef[0],
+                                        coef[1], coef[2], intercept, score, mse)], columns=column)
             regression_frame = pd.concat([regression_frame, parameters], axis=0, ignore_index=True)
 
         path = r'Regression_ready_AFR/regression_results_non_averaged/' + \
@@ -478,16 +477,19 @@ if __name__ == '__main__':
     second.run('sop')
     second.create_dataset()
     second.make_prediction_data()
-    second.special_regression()
+    second.special_regression('sop')
+    del second
 
     second = Development()
     second.run('tvel_bn')
     second.create_dataset()
     second.make_prediction_data()
-    second.special_regression()
+    second.special_regression('tvel_bn')
+    del second
 
     second = Development()
     second.run('tvel_mox')
     second.create_dataset()
     second.make_prediction_data()
-    second.special_regression()
+    second.special_regression('tvel_mox')
+
