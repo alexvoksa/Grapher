@@ -438,7 +438,6 @@ class Development:
             x_rel = np.array(constant_frame.iloc[j, 4::9])
             x_heads = np.array(constant_frame.iloc[j, 5::9])
             x_classic = np.array(constant_frame.iloc[j, 7::9])
-            mm_scaler = preprocessing.MinMaxScaler()
             x = np.array([x_rel, x_heads, x_classic]).T
             y = np.array(constant_frame.iloc[j, 1::9])
             lm = LinearRegression()
@@ -479,15 +478,18 @@ if __name__ == '__main__':
     second.create_dataset()
     second.make_prediction_data()
     second.special_regression('sop')
+    del second
 
     second = Development()
     second.run('tvel_bn')
     second.create_dataset()
     second.make_prediction_data()
     second.special_regression('tvel_bn')
+    del second
 
     second = Development()
     second.run('tvel_mox')
     second.create_dataset()
     second.make_prediction_data()
     second.special_regression('tvel_mox')
+
