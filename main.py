@@ -8,8 +8,8 @@ import math
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
 from multiprocessing import Pool
+
 
 # this function filtering data according to frequency
 def filter_freq(data, minfre, maxfre, min_rewr, max_rewr):
@@ -156,6 +156,7 @@ class ProcessingAfr:
                'all': 'Processed_AFR_all'}
 
     def __init__(self):
+        self.data = pd.DataFrame()
         self.file_name = None
         self.path_correct = None
         self.data = pd.DataFrame
@@ -198,7 +199,6 @@ class ProcessingAfr:
     def df_calc_params(self):
         data = self.data
         name = self.name_sample
-
         feature = ProcessingAfr.params.get(name)
         columns = ['name', 'feature', 'inter_max', 'inter_min', 'parameter_rel',
                    'parameter_heads', 'mse_heads', 'parameter_classic', 'mse_classic']
@@ -458,9 +458,9 @@ class Development:
         print('Done!')
 
 
-def calc(i):
+def calc(data_name):
     first = ProcessingAfr()
-    first.filter_data(i, 100, 400)
+    first.filter_data(data_name, 100, 400)
     first.df_calc_params()
     first.save_data('all')
     del first
@@ -492,4 +492,3 @@ if __name__ == '__main__':
     second.create_dataset()
     second.make_prediction_data()
     second.special_regression('tvel_mox')
-
