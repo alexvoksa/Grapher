@@ -379,7 +379,7 @@ class Development:
             path = folder + name
             loader = pd.read_csv(path, header=None)
             self.data_set = pd.concat([self.data_set, loader], axis=1, ignore_index=True)
-        ready_for_reg_path = r'Regression_ready_AFR/' + str(self.subfolder) + r'/averaged_regr_ready.csv'
+        ready_for_reg_path = r'Regression_ready_AFR/' + str(self.subfolder) + r'/averaged_dataset_ready.csv'
         self.optimize_dataset()
         self.data_set.to_csv(ready_for_reg_path, header=False, index=False)
 
@@ -388,31 +388,6 @@ class Development:
         data_set.drop(data_set[data_set.values == -1].index, axis=0, inplace=True)
         data_set.index = [k for k in range(len(data_set))]
         self.data_set = data_set
-
-    def make_prediction_data(self):
-        lm = LinearRegression()
-        data_set = self.data_set
-        print('Making regression_results_of_averaged . . . ')
-        for i in range(len(data_set)):
-            x1 = np.array(list(data_set.iloc[i, 4::14])).reshape(-1, 1)
-            x2 = np.array(list(data_set.iloc[i, 6::14])).reshape(-1, 1)
-            x3 = np.array(list(data_set.iloc[i, 10::14])).reshape(-1, 1)
-            X = np.concatenate((x1, x2, x3), axis=1)
-            y = np.array(list(data_set.iloc[i, 1::14]))
-            lm.fit(X, y)
-            y_hat = lm.predict(X)
-            coef = list(lm.coef_)
-            intercept = lm.intercept_
-            r2 = lm.score(X, y)
-            mse = mean_squared_error(y, y_hat)
-            parameters = (data_set.iloc[i, 2], data_set.iloc[i, 3], coef[0], coef[1], coef[2], intercept, r2, mse)
-            self.lm_totals.append(parameters)
-        columns = ['max_fre', 'min_fre', 'k_rel', 'k_head', 'k_class', 'b', 'r2_score', 'mse']
-        data = pd.DataFrame(self.lm_totals, columns=columns)
-        path = r'Regression_ready_AFR/regression_results_of_averaged/' + self.subfolder + '/regression_results_' + \
-               self.subfolder + '.csv '
-        data.to_csv(path)
-        print('Done!')
 
     def special_regression(self, kind):
         names = self.lis  # list of all non-averaged samples
@@ -480,19 +455,16 @@ if __name__ == '__main__':
     second = Development()
     second.run('sop')
     second.create_dataset()
-    second.make_prediction_data()
     second.special_regression('sop')
     del second
 
     second = Development()
     second.run('tvel_bn')
     second.create_dataset()
-    second.make_prediction_data()
     second.special_regression('tvel_bn')
     del second
 
     second = Development()
     second.run('tvel_mox')
     second.create_dataset()
-    second.make_prediction_data()
     second.special_regression('tvel_mox')
