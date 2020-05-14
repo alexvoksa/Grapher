@@ -8,18 +8,22 @@ import math
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
 from multiprocessing import Pool
+
 
 # this function filtering data according to frequency
 def filter_freq(data, minfre, maxfre, min_rewr, max_rewr):
     print('Filtering Data')
     # filtering on frequencies
-    print('Data was filtered in range ', str(minfre) + '-' + str(maxfre), 'kHz')
+    print('Data was loaded in range ', str(minfre) + '-' + str(maxfre), 'kHz')
     data = rewrite_freq(data, minfre, maxfre)  # writing frequencies for whole range
     print('Rewriting data in range ', str(min_rewr) + '-' + str(max_rewr), 'kHz')
     data = data.loc[:, (data.loc[1] >= min_rewr) & (data.loc[1] <= max_rewr)]
     data.columns = [i for i in range(len(data.loc[0]))]  # reindexing columns
+    d1 = int(len(data.loc[0]))
+    d2 = round((max_rewr - min_rewr) / d1, 7)
+    li = [min_rewr + i * d2 for i in range(d1)]
+    data = pd.DataFrame([data.loc[0].to_list(), li])
     print('Done!')
     return data
 
@@ -146,7 +150,7 @@ def classic_decr(data, start, stop):
 class ProcessingAfr:
     dir_1 = 'Raw_AFR'  # 'АЧХ чистые'
     lis = os.listdir(dir_1)
-    params = None
+    params = dict
 
     types = ['sop', 'tvel_bn', 'tvel_mox']
 
@@ -156,6 +160,7 @@ class ProcessingAfr:
                'all': 'Processed_AFR_all'}
 
     def __init__(self):
+        self.data = pd.DataFrame()
         self.file_name = None
         self.path_correct = None
         self.data = pd.DataFrame
@@ -198,8 +203,7 @@ class ProcessingAfr:
     def df_calc_params(self):
         data = self.data
         name = self.name_sample
-
-        feature = ProcessingAfr.params.get(name)
+        feature = ProcessingAfr.params[name]
         columns = ['name', 'feature', 'inter_max', 'inter_min', 'parameter_rel',
                    'parameter_heads', 'mse_heads', 'parameter_classic', 'mse_classic']
         df_calc = pd.DataFrame(columns=columns)
@@ -259,8 +263,8 @@ class Development:
         test_type = str(test_type)
         self.sample_type = test_type
         parameters = list(self.kind_of_sample.get(test_type).keys())
+        current_frame = pd.DataFrame()
         for item in parameters:
-            current_frame = pd.DataFrame()
             print('Loading data for:' + str(item))
             for name in names:
                 if item in name:
@@ -458,9 +462,9 @@ class Development:
         print('Done!')
 
 
-def calc(i):
+def calc(data_name):
     first = ProcessingAfr()
-    first.filter_data(i, 100, 400)
+    first.filter_data(data_name, 100, 400)
     first.df_calc_params()
     first.save_data('all')
     del first
@@ -492,4 +496,3 @@ if __name__ == '__main__':
     second.create_dataset()
     second.make_prediction_data()
     second.special_regression('tvel_mox')
-
