@@ -1,15 +1,15 @@
-import pandas as pd
-import numpy as np
-import re
-import os.path
-from tqdm import tqdm
-import os
 import math
+import os
+import os.path
+import pickle
+import re
+
+import numpy as np
+import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.model_selection import train_test_split
-import pickle
-from multiprocessing import Pool
+from tqdm import tqdm
 
 
 # this function filtering data according to frequency
@@ -556,3 +556,5 @@ for obraz in ['sop']:  # , 'tvel_mox', 'tvel_bn']:
     for metod in ['rel', 'classic', 'heads']:
         second = Development()
         second.regress(metod, obraz, 'n')
+
+#
