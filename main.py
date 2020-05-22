@@ -8,6 +8,7 @@ import math
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.model_selection import train_test_split
+import pickle
 from multiprocessing import Pool
 
 
@@ -258,7 +259,7 @@ class Development:
         }
         self.sample_type = None
 
-    def run(self, test_type):
+    def avg(self, test_type):
         names = self.lis
         test_type = str(test_type)
         self.sample_type = test_type
@@ -370,7 +371,7 @@ class Development:
         self.data_set = pd.DataFrame()
         print('File was successfully saved!')
 
-    def create_dataset(self):
+    def create_averaged_frame(self):
         self.subfolder = self.sample_type
         folder = r'Averaged_AFR/' + str(self.subfolder) + '/'
         lis = os.listdir(folder)
@@ -380,16 +381,19 @@ class Development:
             loader = pd.read_csv(path, header=None)
             self.data_set = pd.concat([self.data_set, loader], axis=1, ignore_index=True)
         ready_for_reg_path = r'Regression_ready_AFR/' + str(self.subfolder) + r'/averaged_dataset_ready.csv'
-        self.optimize_dataset()
+        self.drop_minusone()
         self.data_set.to_csv(ready_for_reg_path, header=False, index=False)
 
-    def optimize_dataset(self):
+    def drop_minusone(self):
         data_set = self.data_set
         data_set.drop(data_set[data_set.values == -1].index, axis=0, inplace=True)
         data_set.index = [k for k in range(len(data_set))]
         self.data_set = data_set
 
-    def special_regression(self, kind):
+    def multiple_regression(self, kind):
+
+        # you shouldnt use this method now. It is pasted here for future development
+
         names = self.lis  # list of all non-averaged samples
         keys = list(self.kind_of_sample[kind].keys())
         list_of_files = []
@@ -436,6 +440,88 @@ class Development:
         regression_frame.to_csv(path)
         print('Done!')
 
+    def regress(self, kind, obj, drop):
+        path = 'pickle/data/'
+        if kind == 'rel':
+            column = ['max_int', 'min_int', 'A_rel', 'D_intercept', 'r2_score', 'mse']
+            point = int(4)
+        elif kind == 'heads':
+            column = ['max_int', 'min_int', 'B_heads', 'D_intercept', 'r2_score', 'mse']
+            point = int(5)
+        elif kind == 'classic':
+            column = ['max_int', 'min_int', 'C_classic', 'D_intercept', 'r2_score', 'mse']
+            point = int(7)
+        else:
+            print('Неверное имя метода расчета. Доступны имена rel, heads, classic')
+            raise
+
+        names = self.lis  # list of all non-averaged samples
+        keys = list(self.kind_of_sample[obj].keys())
+        list_of_files = []
+        for num, val in enumerate(names):
+            for p in keys:
+                if p in val:
+                    list_of_files.append(num)
+
+        constant_frame = pd.DataFrame()
+        if len(list_of_files) > 0:
+            names = list(np.array(names)[list_of_files])
+        for name in names:
+            correct_path = self.dir_1 + r'/' + str(name)
+            temporary_frame = pd.read_csv(correct_path, header=None)
+            constant_frame = pd.concat([constant_frame, temporary_frame], axis=1, ignore_index=True)
+        del temporary_frame
+        with open('_'.join([path, obj, kind, 'frame', '.pickle']), 'wb') as f:
+            pickle.dump(constant_frame, f)
+
+        if drop == 'y':
+            dropper = [nu for nu, va in enumerate(constant_frame.values) if -1 in va]
+            constant_frame.drop(dropper, axis=0, inplace=True)
+            constant_frame.index = [i for i in range(len(constant_frame))]
+
+        def regr_train_test(x, y):
+            x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=0)
+            lm.fit(x_train, y_train)
+            y_hat = lm.predict(x_test)
+            coef = lm.coef_[0]
+            intercept = lm.intercept_
+            score = r2_score(y_test, y_hat)
+            mse = mean_squared_error(y_test, y_hat)
+            return coef, intercept, score, mse
+
+        def nonsplit_regr(x, y):
+            lm.fit(x, y)
+            coef = lm.coef_[0]
+            intercept = lm.intercept_
+            score = lm.score(x, y)
+            mse = mean_squared_error(y, lm.predict(x))
+            return coef, intercept, score, mse
+
+        regression_frame = pd.DataFrame(data=None, columns=column)
+
+        for j in range(len(constant_frame)):
+            x = np.array(constant_frame.iloc[j, point::9]).reshape(-1, 1)
+            y = np.array(constant_frame.iloc[j, 1::9])
+            lm = LinearRegression()
+            if obj == 'sop':
+                coef, intercept, score, mse = regr_train_test(x, y)
+            elif obj == 'tvel_mox':
+                coef, intercept, score, mse = nonsplit_regr(x, y)
+            elif obj == 'tvel_bn':
+                coef, intercept, score, mse = regr_train_test(x, y)
+            else:
+                print('Неверно выбрано имя ТВЭЛа! Доступные именя tvel_bn, tvel_mox, sop ')
+                raise
+
+            parameters = pd.DataFrame([(constant_frame.iloc[j, 2], constant_frame.iloc[j, 3], coef,
+                                        intercept, score, mse)], columns=column)
+            regression_frame = pd.concat([regression_frame, parameters], axis=0, ignore_index=True)
+
+        with open('_'.join([path, obj, kind, 'regr', '.pickle']), 'wb') as f:
+            pickle.dump(regression_frame, f)
+        # path = r'Regression_ready_AFR/regression_results_non_averaged/' + \
+        #       obj + '/t_regression_results_six_samples' + kind + '.csv '
+        # regression_frame.to_csv(path)
 
 def calc(data_name):
     first = ProcessingAfr()
@@ -445,6 +531,7 @@ def calc(data_name):
     del first
 
 
+'''
 if __name__ == '__main__':
     with Pool(processes=4) as pool:
         multiple_results = []
@@ -453,18 +540,19 @@ if __name__ == '__main__':
         [res.get() for res in multiple_results]
 
     second = Development()
-    second.run('sop')
-    second.create_dataset()
-    second.special_regression('sop')
+    second.avg('sop')
+    second.create_averaged_frame()
+    second.multiple_regression('sop')
     del second
 
     second = Development()
-    second.run('tvel_bn')
-    second.create_dataset()
-    second.special_regression('tvel_bn')
+    second.avg('tvel_bn')
+    second.create_averaged_frame()
+    second.regress('r', 'tvel_bn', 'y')
     del second
+'''
 
-    second = Development()
-    second.run('tvel_mox')
-    second.create_dataset()
-    second.special_regression('tvel_mox')
+for obraz in ['sop']:  # , 'tvel_mox', 'tvel_bn']:
+    for metod in ['rel', 'classic', 'heads']:
+        second = Development()
+        second.regress(metod, obraz, 'n')
