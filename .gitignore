@@ -6,3 +6,5 @@ rewrited_classic_decr.py
 /.idea/
 /pickle\data/
 /Raw_AFR/
+.pickle
+.csv
