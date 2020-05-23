@@ -5,3 +5,14 @@
 *.pickle
 *.csv
 dump_cframe
+/Old_progs/
+/Метод декремента/
+grapher_final_rel(clear).py
+grafiki.py
+grapher_final_rel.py
+relefnost_grapher.py
+Obrabot_relefnost.py
+rel_obrab.py
+relefnost.py
+relefnost_final.py
+relefnost_grapher.py
